@@ -15,7 +15,7 @@ body { background: var(--black); color: var(--text); height: 100vh; overflow: hi
 .hidden { display: none !important; }
 
 /* Layout SPA */
-.main-layout { display: flex; height: calc(100vh - 65px); width: 100vw; }
+.main-layout { display: flex; height: calc(100vh - 55px); width: 100vw; }
 @media (min-width: 768px) { .main-layout { height: 100vh; } .bottom-nav { display: none; } }
 
 /* Sidebars */
@@ -42,10 +42,18 @@ body { background: var(--black); color: var(--text); height: 100vh; overflow: hi
 .msg-text { font-size: 15px; margin-top: 2px; line-height: 1.4; }
 .edited-tag { font-size: 10px; color: var(--muted); margin-left: 5px; }
 
-/* Input */
-.input-area { padding: 10px 15px 20px; }
-.input-wrapper { background: var(--dark-3); border-radius: 8px; padding: 10px 15px; display: flex; align-items: center; gap: 10px; }
-.input-wrapper input { background: none; border: none; color: white; flex: 1; outline: none; }
+/* Estilo para a Resposta Visual na lista de mensagens */
+.reply-badge { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 5px; margin-bottom: 2px; margin-left: 52px; opacity: 0.8; }
+.reply-badge i { font-size: 10px; transform: scaleX(-1); }
+
+/* Input - Ajustado para ser mais alto e clicável */
+.input-area { padding: 10px 15px 30px; position: relative; }
+.input-wrapper { background: var(--dark-3); border-radius: 12px; padding: 18px 20px; display: flex; align-items: center; gap: 10px; min-height: 60px; }
+.input-wrapper input { background: none; border: none; color: white; flex: 1; outline: none; font-size: 16px; }
+
+/* Barra de Resposta em cima do Input */
+.reply-container { background: var(--dark-2); padding: 8px 15px; border-radius: 8px 8px 0 0; display: flex; align-items: center; justify-content: space-between; font-size: 13px; border-left: 3px solid var(--blurple); margin-bottom: -5px; position: relative; z-index: 1; }
+.reply-container span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 80%; }
 
 /* Modais e Bottom Sheet */
 .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 1000; }
@@ -54,11 +62,12 @@ body { background: var(--black); color: var(--text); height: 100vh; overflow: hi
 .sheet-content button { width: 100%; padding: 16px; background: none; border: none; color: white; text-align: left; display: flex; align-items: center; gap: 15px; font-size: 16px; }
 .sheet-content button:active { background: #222; }
 
-.modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--dark-2); padding: 25px; border-radius: 20px; width: 90%; max-width: 380px; z-index: 1001; border: 1px solid #333; }
+.modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--dark-2); padding: 25px; border-radius: 20px; width: 90%; max-width: 380px; z-index: 1001; border: 1px solid #333; overflow-y: auto; max-height: 90vh; }
 .btn-primary { background: var(--blurple); color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; width: 100%; cursor: pointer; }
 .btn-danger { background: var(--danger); color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; width: 100%; cursor: pointer; }
 
-/* Botões de Navegação Inferior */
-.bottom-nav { position: fixed; bottom: 0; width: 100%; height: 65px; background: var(--dark-1); display: flex; justify-content: space-around; align-items: center; border-top: 1px solid #111; z-index: 999; }
-.nav-item { display: flex; flex-direction: column; align-items: center; color: var(--muted); font-size: 11px; gap: 4px; cursor: pointer;}
+/* Hotbar reduzida */
+.bottom-nav { position: fixed; bottom: 0; width: 100%; height: 55px; background: var(--dark-1); display: flex; justify-content: space-around; align-items: center; border-top: 1px solid #111; z-index: 999; }
+.nav-item { display: flex; flex-direction: column; align-items: center; color: var(--muted); font-size: 10px; gap: 3px; cursor: pointer;}
+.nav-item i { font-size: 18px; }
 .nav-item.active { color: white; }

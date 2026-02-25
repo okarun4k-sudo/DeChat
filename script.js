@@ -19,6 +19,7 @@ const db = getFirestore(app);
 let userLogged = null;
 let activeUnsub = null;
 let activeChannelsUnsub = null;
+let replyData = null; // Armazena a mensagem que está sendo respondida
 
 // --- ROTEADOR SPA ---
 window.navigate = (path) => {
@@ -195,13 +196,14 @@ function loadChannels(serverId, activeChan) {
 }
 
 function renderInputArea(serverId, channelId, isReadOnly) {
-    const isAdmin = (document.getElementById('channels-list').parentElement.innerHTML.includes('fa-gear')); // Checagem rápida de admin na UI
+    const isAdmin = (document.getElementById('channels-list').parentElement.innerHTML.includes('fa-gear'));
     const container = document.getElementById('input-container');
     
     if (channelId === 'boas-vindas' || (isReadOnly && !isAdmin)) {
         container.innerHTML = `<div style="text-align:center; color:var(--muted); font-size:13px; padding: 10px;">Você não tem permissão para enviar mensagens neste canal.</div>`;
     } else {
         container.innerHTML = `
+            <div id="reply-preview-area"></div>
             <div class="input-wrapper">
                 <input type="text" id="msg-input" placeholder="Conversar em #${channelId}">
                 <i class="fa-solid fa-paper-plane" style="cursor:pointer; color:var(--blurple)" onclick="window.sendMsg('${serverId}', '${channelId}')"></i>
@@ -224,13 +226,22 @@ function loadMessages(serverId, channelId) {
         snap.forEach(d => {
             const m = d.data();
             const el = document.createElement('div');
-            el.className = "message";
+            el.className = "message-wrapper"; // Container para agrupar badge de resposta e corpo
+
+            let replyHtml = "";
+            if (m.replyTo) {
+                replyHtml = `<div class="reply-badge"><i class="fa-solid fa-reply"></i> respondendo a <b>${m.replyTo.name}</b>: "${m.replyTo.text}"</div>`;
+            }
+
             el.innerHTML = `
-                <img src="${m.photo}" onclick="window.viewProfile('${m.uid}')">
-                <div class="msg-body">
-                    <b onclick="window.viewProfile('${m.uid}')">${m.name}</b>
-                    <div class="msg-text" onclick="window.openMsgMenu('${d.id}', '${m.uid}', '${m.text}', '${serverId}', '${channelId}')">
-                        ${m.text} ${m.edited ? '<span class="edited-tag">(editada)</span>' : ''}
+                ${replyHtml}
+                <div class="message">
+                    <img src="${m.photo}" onclick="window.viewProfile('${m.uid}')">
+                    <div class="msg-body">
+                        <b onclick="window.viewProfile('${m.uid}')">${m.name}</b>
+                        <div class="msg-text" onclick="window.openMsgMenu('${d.id}', '${m.uid}', '${m.text}', '${serverId}', '${channelId}', '${m.name}')">
+                            ${m.text} ${m.edited ? '<span class="edited-tag">(editada)</span>' : ''}
+                        </div>
                     </div>
                 </div>
             `;
@@ -246,26 +257,90 @@ window.sendMsg = async (serverId, channelId) => {
     const text = input.value;
     input.value = "";
     
-    await addDoc(collection(db, "groups", serverId, "channels", channelId, "messages"), {
+    const msgData = {
         text,
         uid: auth.currentUser.uid,
         name: userLogged.displayName,
         photo: userLogged.photo,
         time: serverTimestamp(),
         edited: false
-    });
+    };
+
+    if (replyData) {
+        msgData.replyTo = replyData;
+        window.cancelReply(); // Limpa a resposta após enviar
+    }
+    
+    await addDoc(collection(db, "groups", serverId, "channels", channelId, "messages"), msgData);
 };
 
-// --- DM (Placeholder para não dar erro) ---
+// --- FUNÇÃO DE RESPOSTA ---
+
+window.replyMsg = (text, authorName) => {
+    replyData = { text: text, name: authorName };
+    const area = document.getElementById('reply-preview-area');
+    if (area) {
+        area.innerHTML = `
+            <div class="reply-container">
+                <span><i class="fa-solid fa-reply"></i> Respondendo a <b>${authorName}</b></span>
+                <i class="fa-solid fa-xmark" style="cursor:pointer" onclick="window.cancelReply()"></i>
+            </div>
+        `;
+    }
+    closeAllModals();
+    document.getElementById('msg-input').focus();
+};
+
+window.cancelReply = () => {
+    replyData = null;
+    const area = document.getElementById('reply-preview-area');
+    if (area) area.innerHTML = "";
+};
+
+// --- DM COM PESQUISA ---
 function renderDMs() {
     document.getElementById('app').innerHTML = `
-        <div class="main-layout" style="justify-content:center; align-items:center; flex-direction:column;">
-            <i class="fa-solid fa-comment-dots" style="font-size:50px; color:var(--muted); margin-bottom:20px;"></i>
-            <h3>Mensagens Diretas</h3>
-            <p style="color:var(--muted)">Em breve! Use os servidores por enquanto.</p>
+        <div class="main-layout" style="flex-direction:column; padding:15px; background: var(--black);">
+            <div class="input-wrapper" style="margin-bottom:20px; border:1px solid #222;">
+                <i class="fa-solid fa-magnifying-glass" style="color:var(--muted)"></i>
+                <input type="text" id="search-user-input" placeholder="Pesquisar @username para conversar...">
+                <button class="btn-primary" style="width:auto; padding:5px 15px;" onclick="window.searchUser()">Buscar</button>
+            </div>
+            
+            <div id="search-results" style="flex:1; overflow-y:auto;">
+                 <div style="text-align:center; color:var(--muted); margin-top:50px;">
+                    <i class="fa-solid fa-comment-dots" style="font-size:50px; margin-bottom:20px;"></i>
+                    <h3>Suas Mensagens</h3>
+                    <p>Procure um usuário acima para iniciar um chat.</p>
+                </div>
+            </div>
         </div>
     `;
 }
+
+window.searchUser = async () => {
+    const username = document.getElementById('search-user-input').value.toLowerCase().trim();
+    const results = document.getElementById('search-results');
+    if(!username) return;
+    
+    const uSnap = await getDoc(doc(db, "usernames", username));
+    if(uSnap.exists()) {
+        const uid = uSnap.data().uid;
+        const userData = (await getDoc(doc(db, "users", uid))).data();
+        results.innerHTML = `
+            <div class="channel-item" style="padding:15px; background:var(--dark-1); border:1px solid #222; border-radius:10px;" onclick="window.viewProfile('${uid}')">
+                <img src="${userData.photo}" style="width:40px; height:40px; border-radius:50%; margin-right:15px;">
+                <div style="flex:1">
+                    <b>${userData.displayName}</b><br>
+                    <span style="font-size:12px; color:var(--muted)">@${userData.username}</span>
+                </div>
+                <i class="fa-solid fa-chevron-right"></i>
+            </div>
+        `;
+    } else {
+        results.innerHTML = `<p style="text-align:center; color:var(--danger)">Usuário não encontrado.</p>`;
+    }
+};
 
 // --- MODAIS E GESTÃO ---
 
@@ -344,20 +419,33 @@ window.showEditServer = async (serverId) => {
         <input type="text" id="edit-srv-photo" value="${s.photo}" style="width:100%; padding:12px; margin:5px 0 15px; background:#111; border:1px solid #333; color:white; border-radius:8px;">
 
         <label style="font-size:12px; color:var(--muted)">CONVIDAR MEMBRO (@username)</label>
-        <div style="display:flex; gap:5px; margin-top:5px;">
+        <div style="display:flex; gap:5px; margin-top:5px; margin-bottom:15px;">
             <input type="text" id="add-member-user" placeholder="tachi123" style="flex:1; padding:12px; background:#111; border:1px solid #333; color:white; border-radius:8px;">
             <button class="btn-primary" style="width:auto; padding:0 15px;" onclick="window.addMember('${serverId}')">Add</button>
         </div>
         
         <div style="margin-top:15px; background:#111; padding:10px; border-radius:8px; border:1px dashed #333;">
-            <p style="font-size:11px; color:var(--muted);">ID de Convite (copie e mande para amigos):</p>
+            <p style="font-size:11px; color:var(--muted);">ID de Convite:</p>
             <b style="font-size:13px; color:var(--blurple); word-break:break-all;">${serverId}</b>
         </div>
 
         <button class="btn-primary" style="margin-top:20px;" onclick="window.saveServerEdit('${serverId}')">Salvar Alterações</button>
+        <button class="btn-danger" style="margin-top:10px;" onclick="window.deleteServerPrompt('${serverId}')">Apagar Servidor</button>
     `;
     modal.classList.remove('hidden');
     document.getElementById('overlay').classList.remove('hidden');
+};
+
+window.deleteServerPrompt = (serverId) => {
+    if(confirm("TEM CERTEZA? Isso vai apagar todas as mensagens e canais do servidor para SEMPRE.")) {
+        window.confirmDeleteServer(serverId);
+    }
+};
+
+window.confirmDeleteServer = async (serverId) => {
+    await deleteDoc(doc(db, "groups", serverId));
+    closeAllModals();
+    navigate('/');
 };
 
 window.saveServerEdit = async (serverId) => {
@@ -409,7 +497,7 @@ window.addMember = async (serverId) => {
 
 function renderProfile() {
     document.getElementById('app').innerHTML = `
-        <div class="main-layout" style="flex-direction:column; padding:20px; align-items:center; background: var(--black);">
+        <div class="main-layout" style="flex-direction:column; padding:20px; align-items:center; background: var(--black); overflow-y:auto;">
             <div style="position:relative;">
                 <img src="${userLogged.photo}" id="profile-img-preview" style="width:120px; height:120px; border-radius:50%; border:4px solid var(--blurple); object-fit:cover;">
                 <div onclick="window.editProfilePhoto()" style="position:absolute; bottom:0; right:0; background:var(--blurple); width:35px; height:35px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;">
@@ -419,14 +507,17 @@ function renderProfile() {
             <h1 style="margin:15px 0 5px;">${userLogged.displayName}</h1>
             <p style="color:var(--muted); margin-bottom:30px;">@${userLogged.username}</p>
             
-            <div style="width:100%; max-width:400px; background:var(--dark-1); padding:20px; border-radius:15px; border:1px solid #222;">
+            <div style="width:100%; max-width:400px; background:var(--dark-1); padding:20px; border-radius:15px; border:1px solid #222; margin-bottom:100px;">
                 <label style="font-size:12px; color:var(--muted)">NOME DE EXIBIÇÃO</label>
                 <input type="text" id="edit-display-name" value="${userLogged.displayName}" style="width:100%; padding:12px; margin:5px 0 20px; background:#000; border:1px solid #333; color:white; border-radius:8px;">
                 
+                <label style="font-size:12px; color:var(--muted)">NOME DE USUÁRIO (@)</label>
+                <input type="text" id="edit-username" value="${userLogged.username}" style="width:100%; padding:12px; margin:5px 0 20px; background:#000; border:1px solid #333; color:white; border-radius:8px;">
+
                 <button class="btn-primary" onclick="window.saveProfile()">Salvar Perfil</button>
             </div>
 
-            <button class="btn-danger" style="margin-top:40px; width:150px; background:none; border:1px solid var(--danger); color:var(--danger);" onclick="signOut(auth)">Sair da Conta</button>
+            <button class="btn-danger" style="margin-top:20px; width:150px; background:none; border:1px solid var(--danger); color:var(--danger);" onclick="signOut(auth)">Sair da Conta</button>
         </div>
     `;
 }
@@ -441,23 +532,35 @@ window.editProfilePhoto = () => {
 
 window.saveProfile = async () => {
     const newName = document.getElementById('edit-display-name').value;
+    const newUsername = document.getElementById('edit-username').value.toLowerCase().trim().replace(/\s+/g, '');
+    
+    if(newUsername !== userLogged.username) {
+        const check = await getDoc(doc(db, "usernames", newUsername));
+        if(check.exists()) return alert("Este @username já está em uso!");
+        await deleteDoc(doc(db, "usernames", userLogged.username));
+        await setDoc(doc(db, "usernames", newUsername), { uid: auth.currentUser.uid });
+    }
+
     await updateDoc(doc(db, "users", auth.currentUser.uid), {
         displayName: newName,
+        username: newUsername,
         photo: userLogged.photo
     });
+    
     userLogged.displayName = newName;
+    userLogged.username = newUsername;
     alert("Perfil atualizado!");
     renderProfile();
 };
 
 // --- MENSAGEM MENU ---
 
-window.openMsgMenu = (msgId, authorUid, text, serverId, chanId) => {
+window.openMsgMenu = (msgId, authorUid, text, serverId, chanId, authorName) => {
     const isMe = authorUid === auth.currentUser.uid;
     const menu = document.getElementById('msg-menu-content');
     
     menu.innerHTML = `
-        <button onclick="window.replyMsg('${text}')"><i class="fa-solid fa-reply"></i> Responder (em breve)</button>
+        <button onclick="window.replyMsg('${text}', '${authorName}')"><i class="fa-solid fa-reply"></i> Responder</button>
         <button onclick="window.viewProfile('${authorUid}')"><i class="fa-solid fa-user"></i> Ver Perfil</button>
         ${isMe ? `
             <button onclick="window.editMsgPrompt('${msgId}', '${text}', '${serverId}', '${chanId}')"><i class="fa-solid fa-pen"></i> Editar Mensagem</button>
@@ -476,7 +579,7 @@ window.deleteMsgPrompt = (id, sId, cId) => {
         <div style="text-align:center">
             <i class="fa-solid fa-circle-exclamation" style="font-size:40px; color:var(--danger); margin-bottom:15px;"></i>
             <h3>Apagar Mensagem?</h3>
-            <p style="color:var(--muted); margin:10px 0;">Deseja mesmo apagar essa mensagem? Isso não pode ser desfeito.</p>
+            <p style="color:var(--muted); margin:10px 0;">Deseja mesmo apagar essa mensagem?</p>
             <div style="display:flex; gap:10px; margin-top:20px;">
                 <button class="btn-primary" style="background:#333" onclick="closeAllModals()">Cancelar</button>
                 <button class="btn-danger" onclick="window.confirmDelete('${id}','${sId}','${cId}')">Sim, Apagar</button>

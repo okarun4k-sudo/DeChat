@@ -1,8 +1,8 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDoc, collection, query, where, onSnapshot, addDoc, updateDoc, arrayUnion, deleteDoc, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-// COLOQUE SEU CONFIG AQUI
+// SUBSTITUA PELOS SEUS DADOS
 const firebaseConfig = {
     apiKey: "AIzaSyD9LDSyd2x2n4Dt6PIQJjLrAltDBWgT2Do",
     authDomain: "mensagem-2f134.firebaseapp.com",
@@ -22,25 +22,45 @@ let unsubMessages = null;
 let unsubTyping = null;
 let typingTimeout = null;
 
-// --- LOGIN SPA ---
+// --- LOGIN & AUTH ---
 document.getElementById('btn-auth').onclick = async () => {
     const email = document.getElementById('email-input').value;
     const pass = document.getElementById('password-input').value;
-    if(!email || !pass) return alert("Preencha tudo!");
+    if(!email || !pass) return alert("Preencha todos os campos!");
+    
     try {
         await signInWithEmailAndPassword(auth, email, pass);
     } catch (e) {
-        try { await createUserWithEmailAndPassword(auth, email, pass); }
-        catch (err) { alert("Erro: " + err.message); }
+        if(e.code === 'auth/user-not-found' || e.code === 'auth/invalid-credential') {
+            try { await createUserWithEmailAndPassword(auth, email, pass); }
+            catch (err) { alert("Erro: " + err.message); }
+        } else { alert("Erro: " + e.message); }
     }
 };
+
+// Recuperação de Senha
+document.getElementById('btn-forgot-pass').onclick = async () => {
+    const email = document.getElementById('email-input').value;
+    if(!email) return alert("Digite seu e-mail primeiro para recuperar a senha.");
+    
+    try {
+        await sendPasswordResetEmail(auth, email);
+        alert("E-mail de recuperação enviado! Verifique sua caixa de entrada.");
+    } catch (e) { alert("Erro ao enviar e-mail: " + e.message); }
+};
+
+// Recarregar Página
+const reloadAction = () => window.location.href = window.location.href.split('#')[0];
+document.getElementById('btn-reload-login').onclick = reloadAction;
+document.getElementById('btn-refresh-app').onclick = reloadAction;
 
 onAuthStateChanged(auth, async (user) => {
     if (user) {
         const uSnap = await getDoc(doc(db, "users", user.uid));
         if (!uSnap.exists()) {
             openModal('modal-profile');
-            toggleProfileEdit(true); // Força edição se for novo
+            document.getElementById('profile-view-mode').classList.add('hidden');
+            document.getElementById('profile-edit-mode').classList.remove('hidden');
         } else {
             userLogged = uSnap.data();
             updateProfileUI();
@@ -58,24 +78,18 @@ onAuthStateChanged(auth, async (user) => {
 function updateProfileUI() {
     document.getElementById('view-p-name').innerText = userLogged.displayName;
     document.getElementById('view-p-username').innerText = "@" + userLogged.username;
-    document.getElementById('view-p-bio').innerText = userLogged.bio || "Sem bio definida.";
     document.getElementById('view-p-photo').src = userLogged.photo;
+    document.getElementById('view-p-bio').innerText = userLogged.bio || "Nenhuma bio definida.";
     
-    // Preencher campos de edição
     document.getElementById('p-name').value = userLogged.displayName;
     document.getElementById('p-username').value = userLogged.username;
     document.getElementById('p-photo').value = userLogged.photo;
     document.getElementById('p-bio').value = userLogged.bio;
 }
 
-function toggleProfileEdit(isEditing) {
-    document.getElementById('profile-view-mode').classList.toggle('hidden', isEditing);
-    document.getElementById('profile-edit-mode').classList.toggle('hidden', !isEditing);
-}
-
 document.getElementById('btn-edit-profile-toggle').onclick = () => {
-    const isEditing = document.getElementById('profile-view-mode').classList.contains('hidden');
-    toggleProfileEdit(!isEditing);
+    document.getElementById('profile-view-mode').classList.toggle('hidden');
+    document.getElementById('profile-edit-mode').classList.toggle('hidden');
 };
 
 document.getElementById('btn-save-profile').onclick = async () => {
@@ -83,14 +97,6 @@ document.getElementById('btn-save-profile').onclick = async () => {
     const displayName = document.getElementById('p-name').value;
     const photo = document.getElementById('p-photo').value || "https://via.placeholder.com/150";
     const bio = document.getElementById('p-bio').value;
-
-    if (username.length < 3) return alert("Username muito curto!");
-
-    // Se mudou o username, checa se existe
-    if (userLogged && userLogged.username !== username) {
-        const nameCheck = await getDoc(doc(db, "usernames", username));
-        if (nameCheck.exists()) return alert("Username em uso!");
-    }
 
     const data = { uid: auth.currentUser.uid, username, displayName, photo, bio };
     await setDoc(doc(db, "users", auth.currentUser.uid), data);
@@ -100,15 +106,12 @@ document.getElementById('btn-save-profile').onclick = async () => {
     location.reload();
 };
 
-// --- CHAT & MENSAGENS ---
+// --- CHAT ---
 function openChat(id, data) {
     currentGroupId = id;
-    document.getElementById('chat-title').innerHTML = `<i class="fa-solid fa-hashtag"></i> ${data.name}`;
+    document.getElementById('chat-title').innerText = "# " + data.name;
     document.getElementById('chat-input-container').classList.remove('hidden');
-    document.getElementById('btn-group-settings').classList.toggle('hidden', data.admin !== auth.currentUser.uid);
     
-    if (window.innerWidth < 768) document.getElementById('main-sidebar').classList.remove('open');
-
     if (unsubMessages) unsubMessages();
     const q = query(collection(db, "groups", id, "messages"), orderBy("time", "asc"));
     unsubMessages = onSnapshot(q, (snap) => {
@@ -116,55 +119,32 @@ function openChat(id, data) {
         box.innerHTML = "";
         snap.forEach(mDoc => {
             const m = mDoc.data();
-            const time = m.time?.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
             box.innerHTML += `
                 <div class="msg-item">
                     <img src="${m.photo}" class="msg-img">
-                    <div class="msg-info">
-                        <b>${m.name}</b> <small>${time || 'agora'}</small>
+                    <div>
+                        <b>${m.name}</b> <small style="color:#555">${m.time?.toDate().toLocaleTimeString() || ''}</small>
                         <p>${m.text}</p>
                     </div>
                 </div>`;
         });
         box.scrollTop = box.scrollHeight;
     });
-    listenTyping(id);
 }
 
-// Enviar mensagem
 document.getElementById('msg-input').onkeypress = async (e) => {
     if (e.key === 'Enter' && e.target.value.trim() !== "") {
         const text = e.target.value;
         e.target.value = "";
         await addDoc(collection(db, "groups", currentGroupId, "messages"), {
-            text, name: userLogged.displayName, username: userLogged.username, photo: userLogged.photo, time: new Date()
+            text, name: userLogged.displayName, photo: userLogged.photo, time: new Date()
         });
-        deleteDoc(doc(db, "groups", currentGroupId, "typing", auth.currentUser.uid));
     }
 };
 
-// --- DIGITANDO ---
-document.getElementById('msg-input').oninput = () => {
-    setDoc(doc(db, "groups", currentGroupId, "typing", auth.currentUser.uid), { name: userLogged.displayName });
-    clearTimeout(typingTimeout);
-    typingTimeout = setTimeout(() => {
-        deleteDoc(doc(db, "groups", currentGroupId, "typing", auth.currentUser.uid));
-    }, 2000);
-};
-
-function listenTyping(id) {
-    if (unsubTyping) unsubTyping();
-    unsubTyping = onSnapshot(collection(db, "groups", id, "typing"), (snap) => {
-        const typers = [];
-        snap.forEach(d => { if (d.id !== auth.currentUser.uid) typers.push(d.data().name); });
-        document.getElementById('typing-text').innerText = typers.length ? typers.join(', ') + " está digitando..." : "";
-    });
-}
-
 // --- GRUPOS ---
 function loadGroups() {
-    const q = query(collection(db, "groups"), where("members", "array-contains", auth.currentUser.uid));
-    onSnapshot(q, (snap) => {
+    onSnapshot(query(collection(db, "groups"), where("members", "array-contains", auth.currentUser.uid)), (snap) => {
         const list = document.getElementById('groups-list');
         list.innerHTML = "";
         snap.forEach(gDoc => {
@@ -181,50 +161,22 @@ function loadGroups() {
 document.getElementById('btn-confirm-group').onclick = async () => {
     const name = document.getElementById('g-name').value;
     const photo = document.getElementById('g-photo').value || "https://via.placeholder.com/150";
-    const desc = document.getElementById('g-desc').value;
-    if(!name) return alert("Dê um nome ao grupo!");
-
     await addDoc(collection(db, "groups"), {
-        name, photo, desc, admin: auth.currentUser.uid, members: [auth.currentUser.uid]
+        name, photo, admin: auth.currentUser.uid, members: [auth.currentUser.uid]
     });
     closeModals();
 };
 
-// --- NAVEGAÇÃO E MODAIS ---
+// --- UI HELPERS ---
 function openModal(id) {
     document.getElementById('overlay').classList.remove('hidden');
     document.querySelectorAll('.modal').forEach(m => m.classList.add('hidden'));
     document.getElementById(id).classList.remove('hidden');
 }
-function closeModals() { 
-    document.getElementById('overlay').classList.add('hidden');
-    toggleProfileEdit(false);
-}
+function closeModals() { document.getElementById('overlay').classList.add('hidden'); }
 
-document.getElementById('overlay').onclick = (e) => { if(e.target.id === 'overlay') closeModals(); };
+document.getElementById('btn-plus').onclick = () => openModal('modal-plus');
+document.getElementById('btn-show-create-group').onclick = () => openModal('modal-create-group');
 document.getElementById('btn-view-profile').onclick = () => openModal('modal-profile');
 document.getElementById('btn-dots').onclick = () => document.getElementById('menu-dropdown').classList.toggle('show');
-document.getElementById('btn-plus').onclick = () => openModal('modal-plus');
-document.getElementById('btn-show-search').onclick = () => openModal('modal-search');
-document.getElementById('btn-show-create-group').onclick = () => openModal('modal-create-group');
 document.getElementById('btn-logout').onclick = () => signOut(auth);
-document.getElementById('mobile-menu-btn').onclick = () => document.getElementById('main-sidebar').classList.toggle('open');
-document.getElementById('btn-go-home').onclick = () => location.reload();
-
-// Busca Amigo
-document.getElementById('btn-exec-search').onclick = async () => {
-    const userSearch = document.getElementById('search-username').value.toLowerCase();
-    const snap = await getDoc(doc(db, "usernames", userSearch));
-    const res = document.getElementById('search-res');
-    if (snap.exists()) {
-        const userData = (await getDoc(doc(db, "users", snap.data().uid))).data();
-        res.innerHTML = `
-            <div class="msg-item" style="margin-top:15px; background:#111; padding:10px; border-radius:8px;">
-                <img src="${userData.photo}" class="msg-img">
-                <div>
-                    <b>${userData.displayName}</b>
-                    <p>${userData.bio}</p>
-                </div>
-            </div>`;
-    } else res.innerHTML = "Usuário não encontrado.";
-};

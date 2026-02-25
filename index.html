@@ -12,18 +12,26 @@
     <section id="login-screen" class="spa-page">
         <div class="login-container">
             <i class="fa-brands fa-discord main-logo"></i>
-            <h1>Bem-vindo!</h1>
+            <h1>Bem-vindo de volta!</h1>
             <p>Estamos muito animados em te ver!</p>
+            
             <div class="input-group">
                 <label>E-MAIL</label>
                 <input type="email" id="email-input">
             </div>
+            
             <div class="input-group">
                 <label>SENHA</label>
                 <input type="password" id="password-input">
+                <button id="btn-forgot-pass" class="link-btn">Esqueci minha senha</button>
             </div>
+            
             <button id="btn-auth" class="btn-primary">Entrar / Cadastrar</button>
         </div>
+
+        <button id="btn-reload-login" class="floating-reload" title="Recarregar página">
+            <i class="fa-solid fa-rotate-right"></i>
+        </button>
     </section>
 
     <section id="app-screen" class="spa-page hidden">
@@ -47,6 +55,7 @@
                     <h3 id="chat-title"><i class="fa-solid fa-house"></i> Home</h3>
                 </div>
                 <div class="header-right">
+                    <button id="btn-refresh-app" class="icon-btn" title="Recarregar App"><i class="fa-solid fa-rotate-right"></i></button>
                     <button id="btn-group-settings" class="icon-btn hidden"><i class="fa-solid fa-gear"></i></button>
                     <div class="dropdown">
                         <button id="btn-dots" class="icon-btn"><i class="fa-solid fa-ellipsis-vertical"></i></button>
@@ -61,7 +70,7 @@
             <div id="chat-messages" class="chat-messages">
                 <div class="welcome-home">
                     <i class="fa-solid fa-face-smile"></i>
-                    <h2>Selecione um grupo ou crie um novo para começar a conversar!</h2>
+                    <h2>Selecione um grupo para começar!</h2>
                 </div>
             </div>
             
@@ -76,35 +85,32 @@
     </section>
 
     <div id="overlay" class="overlay hidden">
-        
         <div id="modal-profile" class="modal profile-card hidden">
             <div class="profile-banner"></div>
             <div class="profile-header">
                 <div class="avatar-wrapper">
-                    <img id="view-p-photo" src="https://via.placeholder.com/150" alt="Avatar">
+                    <img id="view-p-photo" src="https://via.placeholder.com/150">
                 </div>
                 <button id="btn-edit-profile-toggle" class="edit-pencil"><i class="fa-solid fa-pencil"></i></button>
             </div>
-            
             <div class="profile-body">
                 <div id="profile-view-mode">
-                    <h2 id="view-p-name">Nome de Exibição</h2>
-                    <p class="p-username" id="view-p-username">@username</p>
+                    <h2 id="view-p-name">Nome</h2>
+                    <p class="p-username" id="view-p-username">@user</p>
                     <div class="p-divider"></div>
                     <h4>SOBRE MIM</h4>
-                    <p id="view-p-bio" class="p-bio-text">Sua bio aparece aqui...</p>
+                    <p id="view-p-bio" class="p-bio-text"></p>
                 </div>
-
                 <div id="profile-edit-mode" class="hidden">
                     <label>NOME DE EXIBIÇÃO</label>
                     <input type="text" id="p-name">
-                    <label>USERNAME (ÚNICO)</label>
-                    <input type="text" id="p-username" placeholder="user123">
-                    <label>LINK DA FOTO</label>
+                    <label>USERNAME</label>
+                    <input type="text" id="p-username">
+                    <label>URL DA FOTO</label>
                     <input type="text" id="p-photo">
                     <label>BIO</label>
                     <textarea id="p-bio" maxlength="250"></textarea>
-                    <button id="btn-save-profile" class="btn-primary">Salvar Alterações</button>
+                    <button id="btn-save-profile" class="btn-primary">Salvar</button>
                 </div>
             </div>
         </div>
@@ -116,22 +122,21 @@
         </div>
 
         <div id="modal-create-group" class="modal hidden">
-            <h3>Personalize seu grupo</h3>
+            <h3>Criar Grupo</h3>
             <input type="text" id="g-name" placeholder="Nome do Grupo">
-            <input type="text" id="g-photo" placeholder="URL da Imagem do Grupo">
+            <input type="text" id="g-photo" placeholder="URL da Imagem">
             <textarea id="g-desc" placeholder="Descrição"></textarea>
-            <button id="btn-confirm-group" class="btn-primary">Criar Grupo</button>
+            <button id="btn-confirm-group" class="btn-primary">Criar</button>
         </div>
 
         <div id="modal-search" class="modal hidden">
-            <h3>Adicionar por Username</h3>
+            <h3>Buscar Usuário</h3>
             <div class="search-bar">
-                <input type="text" id="search-username" placeholder="Digite o username ex: user9301">
+                <input type="text" id="search-username" placeholder="Username">
                 <button id="btn-exec-search" class="btn-icon-only"><i class="fa-solid fa-chevron-right"></i></button>
             </div>
             <div id="search-res" class="result-box"></div>
         </div>
-
     </div>
 
     <script type="module" src="script.js"></script>

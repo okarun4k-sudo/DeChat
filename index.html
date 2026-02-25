@@ -10,12 +10,16 @@
 <body class="oled-theme">
 
     <div id="app">
-        <div class="loading-screen">
-            <div class="spinner"></div>
         </div>
-    </div>
 
-    <div id="modal-container" class="overlay hidden"></div>
+    <nav id="bottom-nav" class="bottom-nav hidden">
+        <div class="nav-item" onclick="navigate('home')"><i class="fa-solid fa-house"></i><span>Início</span></div>
+        <div class="nav-item" onclick="navigate('groups')"><i class="fa-solid fa-users"></i><span>Grupos</span></div>
+        <div class="nav-item" onclick="navigate('friends')"><i class="fa-solid fa-user-group"></i><span>Amigos</span></div>
+        <div class="nav-item" onclick="navigate('profile')"><i class="fa-solid fa-circle-user"></i><span>Perfil</span></div>
+    </nav>
+
+    <div id="overlay" class="overlay hidden" onclick="closeModals()"></div>
 
     <script type="module" src="script.js"></script>
 </body>

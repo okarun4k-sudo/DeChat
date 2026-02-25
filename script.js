@@ -15,116 +15,66 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-let currentUserData = null;
-let currentGroupId = "geral"; 
-let currentReplyTo = null;
-let activeUnsub = null;
+let userLogged = null;
+let currentGroup = null;
+let currentChannel = "geral";
+let unsubMessages = null;
 
-// --- ROTEADOR ---
-const routes = {
-    "login": renderLogin,
-    "home": renderHome,
-    "groups": renderGroups,
-    "profile": renderProfile
-};
-
-function navigate(path) {
-    const cleanPath = path.replace("/", "") || "home";
-    window.history.pushState({}, "", "/" + cleanPath);
-    handleRoute();
-}
-
-function handleRoute() {
-    const path = window.location.pathname.replace("/", "") || "home";
-    if (!auth.currentUser && path !== "login") return renderLogin();
+// --- ROTEADOR SPA ---
+window.navigate = (path) => {
+    const appEl = document.getElementById('app');
+    const nav = document.getElementById('bottom-nav');
     
-    const renderer = routes[path] || routes.home;
-    renderer();
-}
+    if(!auth.currentUser && path !== 'login') return renderLogin();
+    nav.classList.remove('hidden');
 
-window.onpopstate = handleRoute;
+    if(path === 'home') renderHome();
+    if(path === 'groups') renderGroups();
+    if(path === 'friends') renderFriends();
+    if(path === 'profile') renderProfile();
+};
 
 // --- AUTH LISTENER ---
 onAuthStateChanged(auth, async (user) => {
     if (user) {
         const snap = await getDoc(doc(db, "users", user.uid));
-        if (snap.exists()) {
-            currentUserData = snap.data();
-            handleRoute();
-        } else {
-            // Se o user não tem perfil, força criar um
-            currentUserData = { displayName: "Novo Usuário", photo: "https://i.pravatar.cc/150", username: user.email.split('@')[0] };
-            await setDoc(doc(db, "users", user.uid), currentUserData);
-            handleRoute();
-        }
+        userLogged = snap.data();
+        navigate('home');
     } else {
         renderLogin();
     }
 });
 
-// --- COMPONENTES DE UI ---
-
-function renderNav() {
-    const path = window.location.pathname.replace("/", "") || "home";
-    return `
-        <nav class="sidebar-nav">
-            <div class="nav-icon ${path === 'home' ? 'active' : ''}" onclick="window.navigate('home')"><i class="fa-solid fa-house"></i></div>
-            <div class="nav-icon ${path === 'groups' ? 'active' : ''}" onclick="window.navigate('groups')"><i class="fa-solid fa-users"></i></div>
-            <div class="nav-icon" onclick="window.navigate('profile')" style="background-image: url('${currentUserData?.photo}')"></div>
-            <div style="flex:1"></div>
-            <div class="nav-icon" onclick="window.handleLogout()"><i class="fa-solid fa-right-from-bracket"></i></div>
-        </nav>
-    `;
-}
-
-// --- TELAS ---
+// --- RENDERIZADORES ---
 
 function renderLogin() {
+    document.getElementById('bottom-nav').classList.add('hidden');
     document.getElementById('app').innerHTML = `
-        <div class="auth-container">
-            <div class="auth-card">
-                <h1>Tachi Chat</h1>
-                <p style="color: #666; margin-bottom: 30px;">Entre ou crie sua conta OLED</p>
-                <div class="input-field">
-                    <label>E-mail</label>
-                    <input type="email" id="email" placeholder="seu@email.com">
-                </div>
-                <div class="input-field">
-                    <label>Senha</label>
-                    <input type="password" id="pass" placeholder="••••••••">
-                </div>
-                <button class="btn-primary" id="btn-auth">Entrar / Registrar</button>
-                <button id="btn-reload" style="margin-top:15px; background:none; border:none; color:var(--muted); cursor:pointer;">Recarregar Página</button>
-            </div>
+        <div class="auth-screen" style="padding:40px; text-align:center;">
+            <h1>Tachi Chat</h1>
+            <input type="email" id="email" placeholder="E-mail" style="width:100%; padding:15px; margin:10px 0; border-radius:8px; background:#111; color:white; border:1px solid #333;">
+            <input type="password" id="pass" placeholder="Senha" style="width:100%; padding:15px; margin:10px 0; border-radius:8px; background:#111; color:white; border:1px solid #333;">
+            <button onclick="handleAuth()" class="btn-primary" style="width:100%; padding:15px; background:var(--blurple); border:none; color:white; font-weight:bold; border-radius:8px;">Entrar / Registrar</button>
         </div>
     `;
-
-    document.getElementById('btn-auth').onclick = async () => {
-        const e = document.getElementById('email').value;
-        const p = document.getElementById('pass').value;
-        try {
-            await signInWithEmailAndPassword(auth, e, p);
-        } catch {
-            await createUserWithEmailAndPassword(auth, e, p);
-        }
-    };
-    document.getElementById('btn-reload').onclick = () => location.reload();
 }
 
-function renderHome() {
+function renderProfile() {
     document.getElementById('app').innerHTML = `
-        ${renderNav()}
-        <div class="sidebar-sub">
-            <div class="sub-header">Mensagens Diretas</div>
-            <div class="channel-list">
-                <div class="channel-item"><i class="fa-solid fa-user"></i> Amigo Exemplo (PV)</div>
-            </div>
-        </div>
-        <div class="main-chat">
-            <div class="chat-header">Página Inicial</div>
-            <div class="messages-container" style="justify-content:center; align-items:center; text-align:center;">
-                <h2 style="font-size: 24px;">Olá, ${currentUserData.displayName}!</h2>
-                <p style="color:var(--muted)">Selecione o ícone de grupos para começar a conversar.</p>
+        <div class="profile-screen">
+            <div class="discord-card">
+                <div class="banner">
+                    <img src="${userLogged.photo}" class="p-avatar">
+                </div>
+                <div class="p-info">
+                    <h2>${userLogged.displayName}</h2>
+                    <p>@${userLogged.username}</p>
+                    <div class="p-divider"></div>
+                    <label style="font-size:12px; font-weight:bold; color:var(--muted);">SOBRE MIM</label>
+                    <p style="margin-top:5px;">${userLogged.bio || 'Olá! Estou usando o Tachi.'}</p>
+                    <button onclick="openEditProfile()" style="width:100%; padding:10px; background:#333; color:white; border:none; border-radius:4px;">Editar Perfil</button>
+                    <button onclick="auth.signOut()" style="width:100%; margin-top:10px; color:var(--danger); background:none; border:none;">Sair da Conta</button>
+                </div>
             </div>
         </div>
     `;
@@ -132,138 +82,100 @@ function renderHome() {
 
 function renderGroups() {
     document.getElementById('app').innerHTML = `
-        ${renderNav()}
-        <div class="sidebar-sub">
-            <div class="sub-header">Canais do Grupo</div>
-            <div class="channel-list">
-                <div class="channel-item active" onclick="window.changeChannel('geral')"><i class="fa-solid fa-hashtag"></i> geral</div>
-                <div class="channel-item" onclick="window.changeChannel('avisos')"><i class="fa-solid fa-hashtag"></i> avisos</div>
+        <div class="chat-container">
+            <div class="chat-header">
+                <i class="fa-solid fa-hashtag"></i> <span id="chan-name">geral</span>
             </div>
-            <button class="btn-primary" style="margin:10px; width:auto; font-size:12px;">+ Criar Canal</button>
-        </div>
-        <div class="main-chat">
-            <div class="chat-header" id="channel-title"># geral</div>
-            <div class="messages-container" id="chat-box"></div>
-            <div class="chat-input-area">
-                <div id="reply-preview" class="reply-ref hidden"></div>
-                <div class="input-box">
-                    <input type="text" id="msg-input" placeholder="Conversar em #geral...">
-                    <i class="fa-solid fa-paper-plane" id="btn-send" style="color:var(--blurple); cursor:pointer;"></i>
+            <div id="messages" class="msg-list"></div>
+            <div class="input-area">
+                <div class="input-wrapper">
+                    <i class="fa-solid fa-circle-plus"></i>
+                    <input type="text" id="msg-input" placeholder="Conversar...">
+                    <i class="fa-solid fa-paper-plane" onclick="sendMsg()"></i>
                 </div>
             </div>
         </div>
     `;
-    startChatListener('geral');
-    
-    document.getElementById('btn-send').onclick = () => handleSendMessage();
-    document.getElementById('msg-input').onkeypress = (e) => { if(e.key === 'Enter') handleSendMessage(); };
-}
-
-function renderProfile() {
-    document.getElementById('app').innerHTML = `
-        ${renderNav()}
-        <div class="main-chat" style="align-items:center; justify-content:center;">
-            <div class="auth-card" style="width: 100%; max-width: 500px;">
-                <img src="${currentUserData.photo}" style="width:100px; height:100px; border-radius:50%; margin-bottom:20px; border:3px solid var(--blurple);">
-                <div class="input-field">
-                    <label>Nome de Exibição</label>
-                    <input type="text" id="edit-name" value="${currentUserData.displayName}">
-                </div>
-                <div class="input-field">
-                    <label>URL da Foto</label>
-                    <input type="text" id="edit-photo" value="${currentUserData.photo}">
-                </div>
-                <button class="btn-primary" id="btn-save-profile">Salvar Alterações</button>
-            </div>
-        </div>
-    `;
-
-    document.getElementById('btn-save-profile').onclick = async () => {
-        const name = document.getElementById('edit-name').value;
-        const photo = document.getElementById('edit-photo').value;
-        await updateDoc(doc(db, "users", auth.currentUser.uid), { displayName: name, photo: photo });
-        alert("Perfil atualizado!");
-        location.reload();
-    };
+    setupChat("grupo_exemplo_1", "geral");
 }
 
 // --- FUNÇÕES DE CHAT ---
 
-function startChatListener(channelId) {
-    if(activeUnsub) activeUnsub();
-    const q = query(collection(db, "channels", channelId, "messages"), orderBy("time", "asc"));
+function setupChat(groupId, chanId) {
+    if(unsubMessages) unsubMessages();
+    const q = query(collection(db, "groups", groupId, "channels", chanId, "messages"), orderBy("time", "asc"));
     
-    activeUnsub = onSnapshot(q, (snap) => {
-        const box = document.getElementById('chat-box');
+    unsubMessages = onSnapshot(q, (snap) => {
+        const box = document.getElementById('messages');
         if(!box) return;
         box.innerHTML = "";
         snap.forEach(d => {
             const m = d.data();
-            const isMe = m.uid === auth.currentUser.uid;
-            
-            const msgDiv = document.createElement('div');
-            msgDiv.className = 'message';
-            msgDiv.oncontextmenu = (e) => { e.preventDefault(); handleMessageAction(d.id, m, isMe); };
-            // Para Mobile (Toque longo)
-            let timer;
-            msgDiv.ontouchstart = () => timer = setTimeout(() => handleMessageAction(d.id, m, isMe), 600);
-            msgDiv.ontouchend = () => clearTimeout(timer);
-
-            msgDiv.innerHTML = `
-                <img src="${m.photo}">
-                <div class="msg-content">
-                    ${m.replyTo ? `<div class="reply-ref">Repondendo a ${m.replyTo.name}: ${m.replyTo.text.substring(0,20)}...</div>` : ''}
-                    <b>${m.name}</b> <small>${m.time?.toDate().toLocaleTimeString() || 'Agora'}</small>
-                    <div class="msg-text">${m.text}</div>
+            box.innerHTML += `
+                <div class="message" oncontextmenu="handleMsgAction('${d.id}', '${m.uid}')">
+                    <img src="${m.photo}">
+                    <div class="msg-body">
+                        <b>${m.name}</b>
+                        <p>${m.text}</p>
+                    </div>
                 </div>
             `;
-            box.appendChild(msgDiv);
         });
         box.scrollTop = box.scrollHeight;
     });
 }
 
-async function handleSendMessage() {
+window.sendMsg = async () => {
     const input = document.getElementById('msg-input');
-    const text = input.value.trim();
-    if(!text) return;
-
-    const msgData = {
-        text,
+    if(!input.value) return;
+    await addDoc(collection(db, "groups", "grupo_exemplo_1", "channels", "geral", "messages"), {
+        text: input.value,
         uid: auth.currentUser.uid,
-        name: currentUserData.displayName,
-        photo: currentUserData.photo,
-        time: serverTimestamp(),
-        replyTo: currentReplyTo
-    };
-
+        name: userLogged.displayName,
+        photo: userLogged.photo,
+        time: serverTimestamp()
+    });
     input.value = "";
-    currentReplyTo = null;
-    document.getElementById('reply-preview').classList.add('hidden');
-    
-    await addDoc(collection(db, "channels", currentGroupId, "messages"), msgData);
-}
-
-function handleMessageAction(id, data, isMe) {
-    const action = confirm(isMe ? "Deseja APAGAR ou RESPONDER?" : "Deseja RESPONDER?");
-    if(action && isMe) {
-        if(confirm("Confirmar exclusão?")) deleteDoc(doc(db, "channels", currentGroupId, "messages", id));
-    } else if(action) {
-        currentReplyTo = { name: data.name, text: data.text };
-        const rep = document.getElementById('reply-preview');
-        rep.innerText = `Respondendo a ${data.name}...`;
-        rep.classList.remove('hidden');
-    }
-}
-
-// --- GLOBALS PARA ONCLICK ---
-window.navigate = navigate;
-window.handleLogout = () => signOut(auth);
-window.changeChannel = (id) => {
-    currentGroupId = id;
-    document.getElementById('channel-title').innerText = "# " + id;
-    startChatListener(id);
 };
 
-// Inicia no home
-handleRoute();
+// --- EDITAR PERFIL ---
+window.openEditProfile = () => {
+    const newName = prompt("Novo nome de exibição:", userLogged.displayName);
+    const newBio = prompt("Nova Bio:", userLogged.bio || "");
+    if(newName) {
+        updateDoc(doc(db, "users", auth.currentUser.uid), { displayName: newName, bio: newBio });
+        location.reload();
+    }
+};
+
+// --- AMIGOS (BUSCA) ---
+function renderFriends() {
+    document.getElementById('app').innerHTML = `
+        <div style="padding:20px;">
+            <h3>Adicionar Amigos</h3>
+            <input type="text" id="search-friend" placeholder="Digite o @username" style="width:100%; padding:15px; background:#111; color:white; border:none; border-radius:8px; margin-top:10px;">
+            <button onclick="searchUser()" style="width:100%; margin-top:10px; background:var(--blurple); color:white; padding:12px; border:none; border-radius:8px;">Buscar</button>
+            <div id="friend-res" style="margin-top:20px;"></div>
+        </div>
+    `;
+}
+
+window.searchUser = async () => {
+    const name = document.getElementById('search-friend').value.toLowerCase();
+    const snap = await getDoc(doc(db, "usernames", name));
+    if(snap.exists()) {
+        const u = await getDoc(doc(db, "users", snap.data().uid));
+        const data = u.data();
+        document.getElementById('friend-res').innerHTML = `
+            <div class="message" style="background:#111; padding:10px; border-radius:8px;">
+                <img src="${data.photo}">
+                <div class="msg-body">
+                    <b>${data.displayName}</b>
+                    <button style="display:block; color:var(--blurple); background:none; border:none; margin-top:5px;">Adicionar</button>
+                </div>
+            </div>
+        `;
+    } else {
+        alert("Usuário não encontrado!");
+    }
+};

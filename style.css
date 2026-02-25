@@ -2,55 +2,63 @@
     --black: #000000;
     --dark-1: #090909;
     --dark-2: #121212;
+    --dark-3: #1a1a1a;
     --blurple: #5865f2;
     --text: #ffffff;
     --muted: #888888;
     --danger: #ff4d4d;
-    --input-bg: #1a1a1a;
+    --success: #23a559;
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; -webkit-tap-highlight-color: transparent; }
 body { background: var(--black); color: var(--text); height: 100vh; overflow: hidden; }
 .hidden { display: none !important; }
 
-/* Navegação */
-.bottom-nav { position: fixed; bottom: 0; width: 100%; height: 65px; background: var(--dark-1); display: flex; justify-content: space-around; align-items: center; border-top: 1px solid #1a1a1a; z-index: 100; }
-.nav-item { display: flex; flex-direction: column; align-items: center; color: var(--muted); font-size: 11px; gap: 4px; }
-.nav-item.active { color: white; }
-.nav-item i { font-size: 22px; }
+/* Layout SPA */
+.main-layout { display: flex; height: calc(100vh - 65px); width: 100vw; }
+@media (min-width: 768px) { .main-layout { height: 100vh; } .bottom-nav { display: none; } }
 
-/* Chat e Cabeçalho */
-.chat-container { display: flex; flex-direction: column; height: calc(100vh - 65px); }
-.chat-header { padding: 15px; border-bottom: 1px solid #111; display: flex; justify-content: space-between; align-items: center; background: var(--black); }
-.header-actions { display: flex; gap: 15px; font-size: 20px; }
+/* Sidebars */
+.server-sidebar { width: 70px; background: var(--black); display: flex; flex-direction: column; align-items: center; padding: 12px 0; gap: 12px; border-right: 1px solid #111; overflow-y: auto; }
+.channel-sidebar { width: 240px; background: var(--dark-1); display: flex; flex-direction: column; border-right: 1px solid #111; }
+
+.srv-icon { width: 48px; height: 48px; border-radius: 50%; background: var(--dark-2); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; background-size: cover; background-position: center; }
+.srv-icon:hover, .srv-icon.active { border-radius: 15px; background-color: var(--blurple); }
+
+.channel-item { padding: 8px 12px; margin: 2px 8px; border-radius: 4px; cursor: pointer; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+.channel-item:hover { background: #222; color: #fff; }
+.channel-item.active { background: #333; color: #fff; }
+
+/* Chat Area */
+.chat-container { flex: 1; display: flex; flex-direction: column; background: var(--black); }
+.chat-header { height: 50px; border-bottom: 1px solid #111; display: flex; align-items: center; justify-content: space-between; padding: 0 15px; font-weight: bold; }
+.msg-list { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 12px; }
 
 /* Mensagens */
-.msg-list { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 18px; }
-.message { display: flex; gap: 12px; }
-.message img { width: 42px; height: 42px; border-radius: 50%; object-fit: cover; }
-.msg-body b { color: var(--blurple); font-size: 14px; }
-.msg-body p { font-size: 15px; margin-top: 2px; line-height: 1.4; color: #dcddde; }
+.message { display: flex; gap: 12px; padding: 4px 0; }
+.message img { width: 40px; height: 40px; border-radius: 50%; background: #222; object-fit: cover; }
+.msg-body b { color: var(--blurple); font-size: 14px; cursor: pointer; }
+.msg-body b:hover { text-decoration: underline; }
+.msg-text { font-size: 15px; margin-top: 2px; line-height: 1.4; }
+.edited-tag { font-size: 10px; color: var(--muted); margin-left: 5px; }
 
 /* Input */
-.input-area { padding: 10px; background: var(--black); }
-.input-wrap { background: var(--input-bg); border-radius: 24px; display: flex; align-items: center; padding: 5px 15px; }
-.input-wrap input { background: transparent; border: none; color: white; flex: 1; padding: 10px; outline: none; }
+.input-area { padding: 10px 15px 20px; }
+.input-wrapper { background: var(--dark-3); border-radius: 8px; padding: 10px 15px; display: flex; align-items: center; gap: 10px; }
+.input-wrapper input { background: none; border: none; color: white; flex: 1; outline: none; }
 
-/* Menu de Mensagem (Bottom Sheet) */
-.bottom-sheet { position: fixed; bottom: 0; left: 0; width: 100%; background: #111; border-radius: 20px 20px 0 0; z-index: 1001; padding-bottom: 30px; border: 1px solid #222; }
-.sheet-handle { width: 40px; height: 4px; background: #333; border-radius: 2px; margin: 12px auto; }
-.sheet-content button { width: 100%; padding: 16px; background: none; border: none; color: white; text-align: left; font-size: 16px; display: flex; align-items: center; gap: 15px; }
-.sheet-content button:active { background: #222; }
-.text-danger { color: var(--danger) !important; }
-
-/* Modais */
+/* Modais e Bottom Sheet */
 .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 1000; }
-.modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #111; padding: 25px; border-radius: 16px; width: 90%; max-width: 400px; z-index: 1001; border: 1px solid #222; }
-.input-group { margin: 15px 0; }
-.input-group label { font-size: 11px; color: var(--muted); font-weight: bold; }
-.input-group input { width: 100%; background: #000; border: 1px solid #333; padding: 12px; border-radius: 8px; color: white; margin-top: 5px; }
-.btn-primary { background: var(--blurple); color: white; border: none; padding: 14px; border-radius: 8px; width: 100%; font-weight: bold; }
+.bottom-sheet { position: fixed; bottom: 0; width: 100%; background: var(--dark-1); border-radius: 20px 20px 0 0; z-index: 1001; border-top: 1px solid #222; transition: 0.3s; }
+.sheet-handle { width: 40px; height: 4px; background: #333; border-radius: 2px; margin: 12px auto; }
+.sheet-content button { width: 100%; padding: 16px; background: none; border: none; color: white; text-align: left; display: flex; align-items: center; gap: 15px; font-size: 16px; }
+.sheet-content button:active { background: #222; }
 
-/* Busca Amigos */
-.search-header { display: flex; align-items: center; background: #111; padding: 10px 15px; border-radius: 10px; margin: 10px; gap: 10px; }
-.search-header input { background: none; border: none; color: white; flex: 1; outline: none; }
+.modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--dark-2); padding: 25px; border-radius: 20px; width: 90%; max-width: 380px; z-index: 1001; border: 1px solid #333; }
+.btn-primary { background: var(--blurple); color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; width: 100%; cursor: pointer; }
+.btn-danger { background: var(--danger); color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; width: 100%; cursor: pointer; }
+
+/* Botões de Navegação Inferior */
+.bottom-nav { position: fixed; bottom: 0; width: 100%; height: 65px; background: var(--dark-1); display: flex; justify-content: space-around; align-items: center; border-top: 1px solid #111; z-index: 999; }
+.nav-item { display: flex; flex-direction: column; align-items: center; color: var(--muted); font-size: 11px; gap: 4px; cursor: pointer;}
+.nav-item.active { color: white; }

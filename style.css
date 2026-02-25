@@ -1,61 +1,56 @@
 :root {
     --black: #000000;
-    --dark-1: #050505;
-    --dark-2: #0f0f0f;
+    --dark-1: #090909;
+    --dark-2: #121212;
     --blurple: #5865f2;
-    --text: #f2f3f5;
-    --muted: #949ba4;
-    --danger: #ed4245;
+    --text: #ffffff;
+    --muted: #888888;
+    --danger: #ff4d4d;
+    --input-bg: #1a1a1a;
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Whitney', sans-serif; }
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
 body { background: var(--black); color: var(--text); height: 100vh; overflow: hidden; }
 .hidden { display: none !important; }
 
-/* Navegação Inferior */
-.bottom-nav { 
-    position: fixed; bottom: 0; width: 100%; height: 65px; 
-    background: var(--dark-1); display: flex; justify-content: space-around; 
-    align-items: center; border-top: 1px solid #111; z-index: 100;
-}
-.nav-item { display: flex; flex-direction: column; align-items: center; color: var(--muted); font-size: 10px; gap: 4px; }
-.nav-item i { font-size: 22px; }
+/* Navegação */
+.bottom-nav { position: fixed; bottom: 0; width: 100%; height: 65px; background: var(--dark-1); display: flex; justify-content: space-around; align-items: center; border-top: 1px solid #1a1a1a; z-index: 100; }
+.nav-item { display: flex; flex-direction: column; align-items: center; color: var(--muted); font-size: 11px; gap: 4px; }
 .nav-item.active { color: white; }
+.nav-item i { font-size: 22px; }
 
-/* --- PERFIL ESTILO DISCORD --- */
-.profile-screen { padding: 15px; padding-bottom: 80px; overflow-y: auto; height: 100%; }
-.discord-card { background: #111; border-radius: 12px; overflow: hidden; border: 1px solid #222; }
-.banner { height: 100px; background: var(--blurple); position: relative; }
-.p-avatar { 
-    width: 90px; height: 90px; border-radius: 50%; border: 6px solid #111; 
-    position: absolute; bottom: -45px; left: 20px; background: #000; object-fit: cover;
-}
-.p-info { padding: 55px 20px 20px; }
-.p-info h2 { font-size: 20px; }
-.p-info p { color: var(--muted); font-size: 14px; margin-bottom: 15px; }
-.p-divider { height: 1px; background: #222; margin: 15px 0; }
+/* Chat e Cabeçalho */
+.chat-container { display: flex; flex-direction: column; height: calc(100vh - 65px); }
+.chat-header { padding: 15px; border-bottom: 1px solid #111; display: flex; justify-content: space-between; align-items: center; background: var(--black); }
+.header-actions { display: flex; gap: 15px; font-size: 20px; }
 
-/* --- CHAT MOBILE --- */
-.chat-container { display: flex; flex-direction: column; height: 100vh; padding-bottom: 65px; }
-.chat-header { height: 50px; border-bottom: 1px solid #111; display: flex; align-items: center; padding: 0 15px; gap: 10px; }
-.msg-list { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 15px; }
+/* Mensagens */
+.msg-list { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 18px; }
 .message { display: flex; gap: 12px; }
-.message img { width: 40px; height: 40px; border-radius: 50%; }
+.message img { width: 42px; height: 42px; border-radius: 50%; object-fit: cover; }
 .msg-body b { color: var(--blurple); font-size: 14px; }
-.msg-body p { font-size: 15px; margin-top: 2px; }
+.msg-body p { font-size: 15px; margin-top: 2px; line-height: 1.4; color: #dcddde; }
 
 /* Input */
 .input-area { padding: 10px; background: var(--black); }
-.input-wrapper { background: #222; border-radius: 25px; display: flex; align-items: center; padding: 5px 15px; gap: 10px; }
-.input-wrapper input { background: transparent; border: none; color: white; flex: 1; padding: 10px 0; outline: none; }
+.input-wrap { background: var(--input-bg); border-radius: 24px; display: flex; align-items: center; padding: 5px 15px; }
+.input-wrap input { background: transparent; border: none; color: white; flex: 1; padding: 10px; outline: none; }
 
-/* Botões de Canais */
-.channel-btn { padding: 10px; margin: 5px; background: #111; border-radius: 8px; color: var(--muted); text-align: left; }
-.channel-btn.active { background: #222; color: white; }
+/* Menu de Mensagem (Bottom Sheet) */
+.bottom-sheet { position: fixed; bottom: 0; left: 0; width: 100%; background: #111; border-radius: 20px 20px 0 0; z-index: 1001; padding-bottom: 30px; border: 1px solid #222; }
+.sheet-handle { width: 40px; height: 4px; background: #333; border-radius: 2px; margin: 12px auto; }
+.sheet-content button { width: 100%; padding: 16px; background: none; border: none; color: white; text-align: left; font-size: 16px; display: flex; align-items: center; gap: 15px; }
+.sheet-content button:active { background: #222; }
+.text-danger { color: var(--danger) !important; }
 
 /* Modais */
-.overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000; }
-.modal { 
-    position: fixed; bottom: 0; width: 100%; background: var(--dark-1); 
-    border-radius: 20px 20px 0 0; padding: 25px; z-index: 1001; 
-}
+.overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 1000; }
+.modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #111; padding: 25px; border-radius: 16px; width: 90%; max-width: 400px; z-index: 1001; border: 1px solid #222; }
+.input-group { margin: 15px 0; }
+.input-group label { font-size: 11px; color: var(--muted); font-weight: bold; }
+.input-group input { width: 100%; background: #000; border: 1px solid #333; padding: 12px; border-radius: 8px; color: white; margin-top: 5px; }
+.btn-primary { background: var(--blurple); color: white; border: none; padding: 14px; border-radius: 8px; width: 100%; font-weight: bold; }
+
+/* Busca Amigos */
+.search-header { display: flex; align-items: center; background: #111; padding: 10px 15px; border-radius: 10px; margin: 10px; gap: 10px; }
+.search-header input { background: none; border: none; color: white; flex: 1; outline: none; }

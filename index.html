@@ -3,23 +3,42 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Tachi Chat</title>
+    <title>Tachi Chat | Pro</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="oled-theme">
 
     <div id="app">
-        </div>
+        <div class="loader-screen"><div class="spinner"></div></div>
+    </div>
 
     <nav id="bottom-nav" class="bottom-nav hidden">
-        <div class="nav-item" onclick="navigate('home')"><i class="fa-solid fa-house"></i><span>Início</span></div>
-        <div class="nav-item" onclick="navigate('groups')"><i class="fa-solid fa-users"></i><span>Grupos</span></div>
-        <div class="nav-item" onclick="navigate('friends')"><i class="fa-solid fa-user-group"></i><span>Amigos</span></div>
-        <div class="nav-item" onclick="navigate('profile')"><i class="fa-solid fa-circle-user"></i><span>Perfil</span></div>
+        <div class="nav-item" onclick="navigate('groups')"><i class="fa-solid fa-users"></i><span>Servidores</span></div>
+        <div class="nav-item" onclick="navigate('friends')"><i class="fa-solid fa-comment-dots"></i><span>Mensagens</span></div>
+        <div class="nav-item" onclick="navigate('profile')"><i class="fa-solid fa-circle-user"></i><span>Você</span></div>
     </nav>
 
-    <div id="overlay" class="overlay hidden" onclick="closeModals()"></div>
+    <div id="overlay" class="overlay hidden" onclick="closeAllModals()"></div>
+
+    <div id="msg-menu" class="bottom-sheet hidden">
+        <div class="sheet-handle"></div>
+        <div class="sheet-content">
+            <button onclick="menuReply()"><i class="fa-solid fa-reply"></i> Responder</button>
+            <button id="menu-edit-btn" onclick="menuEdit()"><i class="fa-solid fa-pen"></i> Editar Mensagem</button>
+            <button id="menu-del-btn" onclick="menuDelete()" class="text-danger"><i class="fa-solid fa-trash"></i> Apagar Mensagem</button>
+        </div>
+    </div>
+
+    <div id="modal-create" class="modal hidden">
+        <h3>Criar Canal</h3>
+        <p>Canais são onde a conversa acontece.</p>
+        <div class="input-group">
+            <label>NOME DO CANAL</label>
+            <input type="text" id="new-channel-name" placeholder="ex: suporte-tecnico">
+        </div>
+        <button class="btn-primary" onclick="confirmCreateChannel()">Criar Canal</button>
+    </div>
 
     <script type="module" src="script.js"></script>
 </body>
